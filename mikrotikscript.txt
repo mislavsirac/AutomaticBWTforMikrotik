@@ -1,0 +1,48 @@
+:local test [/file get YOURIPADDRESSES.txt contents];
+:local i 0;
+:local ip 0;
+:local denis [:len $test];
+
+:local rxta
+:local rxtaA
+:local rxtaB
+:local rxtaC
+
+:local txta
+:local txtaA
+:local txtaB
+:local txtaC
+
+/file print file=results.txt
+/file set results.txt contents=""
+
+:put $test
+
+:do {
+  :local j [:find $test "\n" $i];
+  :set ip [:pick $test $i ($j)];
+  :put $ip;:set i ($j+1);
+  :set txta 0
+  :set rxta 0
+  :global asd 0
+  :tool ping-speed $ip duration=3s do={
+    :set asd $current;
+  }
+  :if (asd >0) do={
+      :tool bandwidth-test duration=10s user=USER password=PASSWORD protocol=tcp address=$ip direction=b do={
+            :set rxtaA ($"rx-total-average" / 1000)
+            :set rxtaB ($rxtaA / 10 * 10)
+            :set rxtaC ($rxtaA - $rxtaB) 
+            :set rxtaB ($rxtaB / 1000)
+            :set rxta "$rxtaB.$rxtaC"
+
+            :set txtaA ($"tx-total-average" / 1000)
+            :set txtaB ($txtaA / 10 * 10)
+            :set txtaC ($txtaA - $txtaB)
+            :set txtaB ($txtaB / 1000)
+            :set txta "$txtaB.$txtaC"
+
+      }
+  }
+  /file set results.txt contents=([get results.txt contents] . "$txta,$rxta\n")
+} while=([:find $test "\n" $i] > 0);
